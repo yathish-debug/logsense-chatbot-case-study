@@ -1,0 +1,365 @@
+{
+  "schema_version": "1.0",
+  "description": "Troubleshooting knowledge base for LogSense. Each entry maps an observable log symptom to likely causes and concrete checks. Retrieved by TF-IDF cosine similarity in chatbot.py (see KnowledgeBase.retrieve).",
+  "entries": [
+    {
+      "id": "kb-001",
+      "title": "Database connection timeout",
+      "subsystem": "database",
+      "symptoms": [
+        "could not connect to database within timeout",
+        "connection timed out while acquiring connection",
+        "OperationalError: timeout expired",
+        "psycopg2.OperationalError: connection timed out"
+      ],
+      "likely_causes": [
+        "Database server unreachable or restarting",
+        "Connection pool exhausted by long-running queries",
+        "Network path or security group blocking the database port",
+        "Timeout value too low for current query latency"
+      ],
+      "checks": [
+        "Confirm the database accepts connections from the app host on the configured port",
+        "Compare active connections against the server's max_connections limit",
+        "Look for slow queries holding pool connections open",
+        "Check whether the database restarted around the first failure timestamp"
+      ],
+      "keywords": ["database", "timeout", "connection", "pool", "postgres", "mysql"]
+    },
+    {
+      "id": "kb-002",
+      "title": "Connection pool exhausted",
+      "subsystem": "database",
+      "symptoms": [
+        "connection pool exhausted",
+        "TimeoutError: QueuePool limit of size reached",
+        "unable to acquire connection from pool",
+        "pool limit reached, overflow exceeded"
+      ],
+      "likely_causes": [
+        "Connections leaked by code paths that never close sessions",
+        "Traffic spike beyond pool capacity",
+        "Slow queries occupying connections longer than expected",
+        "Pool size configured too small for worker concurrency"
+      ],
+      "checks": [
+        "Verify every request path closes or returns its session, including error paths",
+        "Compare pool size against total worker and thread count",
+        "Identify the longest-running queries during the incident window",
+        "Check whether failures correlate with a request-rate increase"
+      ],
+      "keywords": ["pool", "exhausted", "queuepool", "connection", "leak", "database"]
+    },
+    {
+      "id": "kb-003",
+      "title": "Upstream HTTP 5xx from a dependency",
+      "subsystem": "http_api",
+      "symptoms": [
+        "API request failed with HTTP 500",
+        "upstream returned status 502",
+        "received 503 Service Unavailable from downstream service",
+        "gateway timeout calling service"
+      ],
+      "likely_causes": [
+        "Downstream service is unhealthy or deploying",
+        "Downstream dependency (its own database or cache) is failing",
+        "Request payload triggers an unhandled error in the dependency",
+        "Load balancer routing to unready instances"
+      ],
+      "checks": [
+        "Check the downstream service's own logs and health endpoint for the same window",
+        "Confirm whether the failures hit one instance or all of them",
+        "Review recent deployments to the downstream service",
+        "Verify retry and circuit-breaker settings are not amplifying load"
+      ],
+      "keywords": ["http", "500", "502", "503", "upstream", "api", "gateway", "downstream"]
+    },
+    {
+      "id": "kb-004",
+      "title": "Connection refused to a dependency",
+      "subsystem": "network",
+      "symptoms": [
+        "ConnectionRefusedError: [Errno 111] Connection refused",
+        "connect ECONNREFUSED",
+        "failed to establish a new connection"
+      ],
+      "likely_causes": [
+        "Target process is not running or not yet listening",
+        "Wrong host or port in configuration",
+        "Firewall, security group or network policy blocking the port",
+        "Service restarted and has not finished binding its port"
+      ],
+      "checks": [
+        "Confirm the target service is running and listening on the expected port",
+        "Compare the configured host and port against the service's actual address",
+        "Check whether the target restarted just before the first refusal",
+        "Test connectivity from the app host rather than from your workstation"
+      ],
+      "keywords": ["connection refused", "econnrefused", "network", "port", "unreachable"]
+    },
+    {
+      "id": "kb-005",
+      "title": "DNS resolution failure",
+      "subsystem": "network",
+      "symptoms": [
+        "Name or service not known",
+        "getaddrinfo ENOTFOUND",
+        "Temporary failure in name resolution",
+        "could not resolve host"
+      ],
+      "likely_causes": [
+        "Hostname misspelled or environment variable unset",
+        "Internal DNS or service discovery outage",
+        "Cluster DNS cache or resolver pod unhealthy",
+        "Service removed or renamed without updating callers"
+      ],
+      "checks": [
+        "Resolve the hostname from inside the same network namespace as the app",
+        "Confirm the hostname environment variable is set in the running container",
+        "Check the DNS service's own health for the incident window",
+        "Look for a recent rename or teardown of the target service"
+      ],
+      "keywords": ["dns", "resolve", "getaddrinfo", "enotfound", "hostname", "network"]
+    },
+    {
+      "id": "kb-006",
+      "title": "Read timeout calling an external service",
+      "subsystem": "timeout",
+      "symptoms": [
+        "ReadTimeout: HTTPSConnectionPool read timed out",
+        "deadline exceeded",
+        "request timed out after 30s",
+        "socket timeout while waiting for response"
+      ],
+      "likely_causes": [
+        "Dependency is slow under load rather than fully down",
+        "Client timeout shorter than the dependency's normal latency",
+        "Large response payload or unpaginated query",
+        "Network congestion or packet loss on the path"
+      ],
+      "checks": [
+        "Compare the client timeout against the dependency's p99 latency",
+        "Check whether the dependency reports elevated latency in the same window",
+        "Look for an unbounded query or missing pagination in the failing call",
+        "Confirm retries use backoff rather than firing immediately"
+      ],
+      "keywords": ["timeout", "read timeout", "deadline", "latency", "slow", "socket"]
+    },
+    {
+      "id": "kb-007",
+      "title": "Authentication or authorization failure",
+      "subsystem": "auth",
+      "symptoms": [
+        "401 Unauthorized",
+        "403 Forbidden",
+        "invalid token",
+        "token expired",
+        "permission denied for role"
+      ],
+      "likely_causes": [
+        "Credential or API key expired or rotated",
+        "Clock skew invalidating signed tokens",
+        "Service account missing a required role or scope",
+        "Secret not injected into the running environment"
+      ],
+      "checks": [
+        "Confirm the credential is present and unexpired in the running environment",
+        "Check for a recent key or secret rotation",
+        "Verify the service account's roles and scopes cover the attempted action",
+        "Compare host clock against NTP if tokens are signed and time-bound"
+      ],
+      "keywords": ["auth", "401", "403", "token", "unauthorized", "forbidden", "credential"]
+    },
+    {
+      "id": "kb-008",
+      "title": "Out of memory / heap exhaustion",
+      "subsystem": "memory",
+      "symptoms": [
+        "java.lang.OutOfMemoryError: Java heap space",
+        "MemoryError",
+        "Killed process (oom-killer)",
+        "cannot allocate memory"
+      ],
+      "likely_causes": [
+        "Memory leak accumulating over uptime",
+        "Loading an unbounded result set or file into memory",
+        "Container memory limit lower than the runtime's heap setting",
+        "Traffic spike multiplying per-request memory use"
+      ],
+      "checks": [
+        "Plot memory use over the process lifetime to separate a leak from a spike",
+        "Compare the container memory limit against the configured heap size",
+        "Look for queries or file reads without a limit or streaming",
+        "Check whether the process was restarted by the OOM killer"
+      ],
+      "keywords": ["outofmemory", "oom", "heap", "memory", "memoryerror", "allocate"]
+    },
+    {
+      "id": "kb-009",
+      "title": "Disk full or write failure",
+      "subsystem": "disk",
+      "symptoms": [
+        "No space left on device",
+        "OSError: [Errno 28]",
+        "disk quota exceeded",
+        "read-only file system"
+      ],
+      "likely_causes": [
+        "Log or temp files growing without rotation",
+        "Volume undersized for current data growth",
+        "Filesystem remounted read-only after an I/O error",
+        "Orphaned artifacts or core dumps accumulating"
+      ],
+      "checks": [
+        "Check free space and inode usage on the affected mount",
+        "Identify the largest directories and confirm log rotation is active",
+        "Review kernel messages for I/O errors that could force a read-only remount",
+        "Confirm temp directories are cleaned between runs"
+      ],
+      "keywords": ["disk", "no space", "errno 28", "quota", "read-only", "filesystem"]
+    },
+    {
+      "id": "kb-010",
+      "title": "Background worker stopped or crashed",
+      "subsystem": "worker_queue",
+      "symptoms": [
+        "worker exited unexpectedly",
+        "background job stopped processing",
+        "consumer disconnected from queue",
+        "scheduler heartbeat missed"
+      ],
+      "likely_causes": [
+        "Unhandled exception terminating the worker loop",
+        "Broker connection lost and never re-established",
+        "Worker killed for exceeding a memory or time limit",
+        "Deploy or restart that the worker did not recover from"
+      ],
+      "checks": [
+        "Find the last exception the worker logged before it stopped",
+        "Check queue depth to confirm messages are accumulating unconsumed",
+        "Verify the broker connection and whether reconnect logic exists",
+        "Look for an external kill signal or restart at that timestamp"
+      ],
+      "keywords": ["worker", "queue", "consumer", "job", "celery", "scheduler", "crash"]
+    },
+    {
+      "id": "kb-011",
+      "title": "Missing or invalid configuration",
+      "subsystem": "config",
+      "symptoms": [
+        "KeyError: environment variable not set",
+        "configuration value missing",
+        "invalid setting for parameter",
+        "failed to load config file"
+      ],
+      "likely_causes": [
+        "Environment variable or secret absent in this deployment",
+        "Config file path wrong inside the container image",
+        "Schema change shipped without updating the deployed config",
+        "Type mismatch, such as a string where a number is expected"
+      ],
+      "checks": [
+        "Print the resolved config at startup with secrets redacted",
+        "Diff the deployed config against a working environment",
+        "Confirm the config file exists at the expected path in the image",
+        "Check whether the failure began immediately after a deploy"
+      ],
+      "keywords": ["config", "environment variable", "keyerror", "setting", "missing"]
+    },
+    {
+      "id": "kb-012",
+      "title": "Database deadlock or lock timeout",
+      "subsystem": "database",
+      "symptoms": [
+        "deadlock detected",
+        "Lock wait timeout exceeded",
+        "could not serialize access due to concurrent update"
+      ],
+      "likely_causes": [
+        "Transactions acquiring locks in inconsistent order",
+        "Long transactions holding locks across external calls",
+        "Bulk write competing with interactive traffic",
+        "Missing index forcing broad row or table locks"
+      ],
+      "checks": [
+        "Read the database's deadlock log to see both sides of the conflict",
+        "Shorten transactions so they do not span network calls",
+        "Standardize the order in which rows and tables are locked",
+        "Check for missing indexes on the predicates involved"
+      ],
+      "keywords": ["deadlock", "lock wait", "transaction", "serialize", "database"]
+    },
+    {
+      "id": "kb-013",
+      "title": "Null or missing field dereference",
+      "subsystem": "general",
+      "symptoms": [
+        "NullPointerException",
+        "AttributeError: 'NoneType' object has no attribute",
+        "TypeError: cannot read property of undefined",
+        "KeyError in response payload"
+      ],
+      "likely_causes": [
+        "Upstream response shape changed or returned empty",
+        "Optional field assumed present without a guard",
+        "Partial failure returning an incomplete object",
+        "Race condition reading state before it is populated"
+      ],
+      "checks": [
+        "Read the stack trace to find the exact dereferenced field",
+        "Log the upstream payload shape for a failing request",
+        "Add a guard or default for the optional field",
+        "Check whether an upstream contract changed recently"
+      ],
+      "keywords": ["nullpointer", "nonetype", "attributeerror", "undefined", "keyerror"]
+    },
+    {
+      "id": "kb-014",
+      "title": "Rate limited or throttled by a provider",
+      "subsystem": "http_api",
+      "symptoms": [
+        "429 Too Many Requests",
+        "rate limit exceeded",
+        "quota exceeded for requests",
+        "throttled, retry after"
+      ],
+      "likely_causes": [
+        "Request volume above the plan's quota",
+        "Retry storm multiplying load after a transient failure",
+        "Missing caching causing repeated identical calls",
+        "Quota shared with another service or environment"
+      ],
+      "checks": [
+        "Compare request volume against the documented quota",
+        "Confirm retries use exponential backoff and a cap",
+        "Add caching for repeated identical requests",
+        "Check whether another environment shares the same API key"
+      ],
+      "keywords": ["429", "rate limit", "throttle", "quota", "retry after", "backoff"]
+    },
+    {
+      "id": "kb-015",
+      "title": "TLS or certificate validation failure",
+      "subsystem": "network",
+      "symptoms": [
+        "SSLCertVerificationError: certificate verify failed",
+        "handshake failure",
+        "certificate has expired",
+        "unable to get local issuer certificate"
+      ],
+      "likely_causes": [
+        "Server certificate expired or was replaced",
+        "CA bundle missing or outdated in the container image",
+        "Hostname mismatch against the certificate's subject",
+        "Intercepting proxy presenting its own certificate"
+      ],
+      "checks": [
+        "Inspect the server certificate's expiry and subject names",
+        "Confirm the CA bundle is present and current in the image",
+        "Check whether traffic passes through a proxy that terminates TLS",
+        "Verify the hostname used matches a name on the certificate"
+      ],
+      "keywords": ["tls", "ssl", "certificate", "handshake", "verify failed", "expired"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+# LogSense dependencies.
+# Kept deliberately small: parsing and correlation use the standard library,
+# so the only hard requirements are the UI, the dataframe layer and the
+# TF-IDF/clustering primitives.
+
+streamlit>=1.50,<2.0        # chat UI and file upload
+pandas>=2.2                 # tabular views and timeline frames
+scikit-learn>=1.4           # TF-IDF retrieval + DBSCAN error clustering
+plotly>=5.22                # error frequency / timeline charts
+openai>=1.40                # LLM explanations (optional at runtime)
+
+# Development only
+pytest>=8.0

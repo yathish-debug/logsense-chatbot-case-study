@@ -1,0 +1,63 @@
+2026-11-02 14:00:03,114 INFO  [main] app.bootstrap - Starting orders-api v2.14.3 (pid 1842)
+2026-11-02 14:00:03,409 INFO  [main] app.config - Loaded configuration profile=production
+2026-11-02 14:00:04,002 INFO  [main] db.pool - Initialized connection pool size=10 overflow=5
+2026-11-02 14:00:04,331 INFO  [main] app.http - Listening on 0.0.0.0:8080
+2026-11-02 14:00:05,110 INFO  [worker-1] queue.consumer - Subscribed to orders.events
+2026-11-02 14:00:41,882 INFO  [http-7] api.orders - GET /v1/orders/18823 200 in 42ms
+2026-11-02 14:01:02,145 INFO  [http-3] api.orders - POST /v1/orders 201 in 118ms
+2026-11-02 14:01:33,507 INFO  [http-9] api.orders - GET /v1/orders/18824 200 in 51ms
+2026-11-02 14:01:44,220 WARN  [db-monitor] db.pool - Connection pool at 9/10 in use, checkout wait 740ms
+2026-11-02 14:01:51,668 WARN  [db-monitor] db.pool - Slow query 2841ms: SELECT * FROM order_items WHERE order_id = 18825
+2026-11-02 14:01:58,903 ERROR [http-4] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+Traceback (most recent call last):
+  File "/srv/app/api/orders.py", line 88, in get_order
+    with db.session() as session:
+  File "/srv/app/db/session.py", line 41, in session
+    conn = pool.acquire(timeout=3.0)
+  File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in acquire
+    raise exc.TimeoutError("QueuePool limit of size 10 overflow 5 reached")
+sqlalchemy.exc.TimeoutError: QueuePool limit of size 10 overflow 5 reached, connection timed out
+2026-11-02 14:02:04,117 ERROR [http-7] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:02:19,540 ERROR [http-2] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:02:27,004 WARN  [db-monitor] db.pool - Connection pool exhausted, 15/15 in use, 23 requests queued
+2026-11-02 14:02:51,338 INFO  [http-5] api.health - GET /healthz 200 in 3ms
+2026-11-02 14:03:01,772 ERROR [http-8] api.orders - API request failed with HTTP 500 path=/v1/orders/18826 duration=3041ms
+2026-11-02 14:03:02,118 ERROR [http-1] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:03:05,449 ERROR [http-6] api.orders - API request failed with HTTP 500 path=/v1/orders/18827 duration=3038ms
+2026-11-02 14:03:09,881 ERROR [http-3] payments.client - ReadTimeout: HTTPSConnectionPool(host='payments.internal', port=443): Read timed out (timeout=5.0)
+2026-11-02 14:03:12,207 ERROR [http-9] api.orders - API request failed with HTTP 500 path=/v1/orders/18828 duration=3052ms
+2026-11-02 14:03:17,663 ERROR [http-4] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+{"timestamp": "2026-11-02T14:03:21.004", "level": "ERROR", "logger": "payments.client", "message": "Upstream returned status 502 from payments.internal/v1/charge", "attempt": 2, "order_id": 18829}
+2026-11-02 14:03:24,915 ERROR [http-2] api.orders - API request failed with HTTP 500 path=/v1/orders/18829 duration=3061ms
+2026-11-02 14:03:30,442 ERROR [http-7] api.serializer - AttributeError: 'NoneType' object has no attribute 'total_cents'
+Traceback (most recent call last):
+  File "/srv/app/api/orders.py", line 131, in serialize_order
+    return {"total": order.total_cents, "status": order.status}
+AttributeError: 'NoneType' object has no attribute 'total_cents'
+2026-11-02 14:03:36,118 ERROR [http-5] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:03:41,993 ERROR [http-8] api.orders - API request failed with HTTP 500 path=/v1/orders/18830 duration=3044ms
+2026-11-02 14:03:48,560 ERROR [http-3] payments.client - ReadTimeout: HTTPSConnectionPool(host='payments.internal', port=443): Read timed out (timeout=5.0)
+2026-11-02 14:03:55,201 ERROR [http-1] api.orders - API request failed with HTTP 500 path=/v1/orders/18831 duration=3057ms
+2026-11-02 14:04:02,884 WARN  [db-monitor] db.pool - Checkout wait exceeded 10s for 31 queued requests
+2026-11-02 14:04:08,117 ERROR [worker-1] queue.consumer - Background worker stopped unexpectedly while processing message id=9f2c41a8-7b3e-4c91-9d2a-6f1b8e0d33c7
+Traceback (most recent call last):
+  File "/srv/app/worker/consumer.py", line 74, in run
+    self.handle(message)
+  File "/srv/app/worker/handlers.py", line 29, in handle
+    order = repo.load(message.order_id)
+  File "/srv/app/db/session.py", line 41, in session
+    conn = pool.acquire(timeout=3.0)
+sqlalchemy.exc.TimeoutError: QueuePool limit of size 10 overflow 5 reached, connection timed out
+2026-11-02 14:04:22,650 ERROR [http-6] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:04:39,118 CRITICAL [health] app.health - Readiness probe failed 3 consecutive times, marking instance unhealthy
+2026-11-02 14:05:11,447 ERROR [http-4] api.orders - API request failed with HTTP 500 path=/v1/orders/18832 duration=3049ms
+2026-11-02 14:05:48,002 WARN  [db-monitor] db.pool - Connection pool at 14/15 in use, checkout wait 8100ms
+2026-11-02 14:06:03,771 ERROR [http-9] db.session - Database connection timeout after 3000ms (host=orders-db-primary.internal:5432)
+2026-11-02 14:06:44,118 INFO  [db-monitor] db.pool - Checkout wait recovering, 6/15 in use
+2026-11-02 14:07:19,330 ERROR [http-2] payments.client - ReadTimeout: HTTPSConnectionPool(host='payments.internal', port=443): Read timed out (timeout=5.0)
+2026-11-02 14:07:52,604 INFO  [http-5] api.orders - GET /v1/orders/18833 200 in 61ms
+2026-11-02 14:08:14,882 ERROR [http-7] api.serializer - AttributeError: 'NoneType' object has no attribute 'total_cents'
+2026-11-02 14:08:50,117 INFO  [worker-2] queue.consumer - Worker restarted, resuming orders.events at offset 48211
+2026-11-02 14:09:05,443 INFO  [db-monitor] db.pool - Connection pool healthy, 4/15 in use
+2026-11-02 14:09:38,220 INFO  [http-3] api.orders - POST /v1/orders 201 in 97ms
+2026-11-02 14:09:59,881 INFO  [health] app.health - Readiness probe passing, instance marked healthy
